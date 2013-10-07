@@ -6,6 +6,41 @@
 
 double g_time;
 
+// -- Textures --
+
+enum TexID
+{
+  TEX_RINK = 0
+};
+
+struct Texture
+{
+  const char * file;
+  int tex;
+} TEXTURES[] = {
+  { "data/rink.bnp", 0 }
+};
+
+void loadTextures()
+{
+  for (int i = 0; i < SIZE_ARRAY(TEXTURES); ++i)
+    TEXTURES[i].tex = CORE_LoadBmp(TEXTURES[i].file, false);
+}
+
+void unloadTextures()
+{
+  for (int i = 0; i < SIZE_ARRAY(TEXTURES); ++i)
+    CORE_UnloadBmp(TEXTURES[i].tex);
+}
+
+int texID(int id)
+{
+  assert(id < SIZE_ARRAY(TEXTURES));
+  return TEXTURES[id].tex;
+}
+
+// -- Input --
+
 enum InputMask
 {
   INPUT_LEFT = 0,
@@ -15,7 +50,6 @@ enum InputMask
   INPUT_SHOOT = 8,
   INPUT_PASS = 16
 };
-
 
 struct InputMapping
 {
@@ -66,8 +100,9 @@ struct Team
 
 struct Sprite
 {
-  int tex;
   vec2 size;
+  int tex;
+  rgba color;
 };
 
 enum COMPONENTS
@@ -141,17 +176,6 @@ void applyPosition(double dt)
   }
 }
 
-void renderSprites()
-{
-  FOR_ENTITY(COMPONENT_POSITION | COMPONENT_SPRITE)
-  {
-    Position & pos = g_world.position[i];
-    Sprite & sprite = g_world.sprite[i];
-
-    CORE_RenderCenteredSprite(pos.pos, sprite.size, sprite.tex);
-  }
-}
-
 // -- Main Game
 
 int createTeam()
@@ -170,8 +194,21 @@ int createTeam()
   return team;
 }
 
+int createRink()
+{
+  int rink = createEntity(g_world, COMPONENT_POSITION | COMPONENT_SPRITE);
+
+  g_world.position[rink].pos = vmake(0, 0);
+  g_world.sprite[rink].size = vmake(61.0, 30.5);
+  g_world.sprite[rink].color = COLOR_WHITE;
+
+  return rink;
+}
+
 void startGame()
 {
+  loadTextures();
+
   initWorld(g_world);
 
   g_team1 = createTeam();
@@ -182,12 +219,21 @@ void startGame()
 
 void endGame()
 {
-
+  unloadTextures();
 }
 
 void render()
 {
-  renderSprites();
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  // Render all sprites
+  FOR_ENTITY(COMPONENT_POSITION | COMPONENT_SPRITE)
+  {
+    Position & pos = g_world.position[i];
+    Sprite & sprite = g_world.sprite[i];
+
+    CORE_RenderCenteredSprite(pos.pos, sprite.size, sprite.tex, sprite.color);
+  }
 }
 
 void processInput()
