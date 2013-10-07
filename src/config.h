@@ -45,5 +45,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <math.h>
+#include <assert.h>
 
 #endif
