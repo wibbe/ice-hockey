@@ -18,7 +18,7 @@ struct Texture
   const char * file;
   int tex;
 } TEXTURES[] = {
-  { "data/rink.bnp", 0 }
+  { "data/rink.bmp", 0 }
 };
 
 void loadTextures()
