@@ -6,6 +6,9 @@
 
 double g_time;
 
+#define RINK_WIDTH  61.0
+#define RINK_HEIGHT 30.5
+
 // -- Textures --
 
 enum TexID
@@ -105,6 +108,12 @@ struct Sprite
   rgba color;
 };
 
+struct Collider
+{
+  float bounce;
+  float radius;
+};
+
 enum COMPONENTS
 {
   COMPONENT_NONE = 0,
@@ -112,7 +121,8 @@ enum COMPONENTS
   COMPONENT_VELOCITY = 1 << 1,
   COMPONENT_INPUT = 1 << 2,
   COMPONENT_TEAM = 1 << 3,
-  COMPONENT_SPRITE = 1 << 4
+  COMPONENT_SPRITE = 1 << 4,
+  COMPONENT_COLLIDER = 1 << 5
 };
 
 // -- World --
@@ -126,6 +136,7 @@ struct World
   Input input[MAX_ENTITIES];
   Team team[MAX_ENTITIES];
   Sprite sprite[MAX_ENTITIES];
+  Collider collider[MAX_ENTITIES];
 };
 
 void initWorld(World & world)
@@ -167,12 +178,37 @@ int g_team2;
 
 // -- Systems --
 
-void applyPosition(double dt)
+void moveObjects(double dt)
 {
   FOR_ENTITY(COMPONENT_POSITION | COMPONENT_VELOCITY)
   {
     Position & pos = g_world.position[i];
     Velocity & vel = g_world.velocity[i];
+
+    pos.pos = vadd(pos.pos, vscale(vel.vel, dt));
+  }
+}
+
+void checkCollisions()
+{
+  const double halfWidth = RINK_WIDTH * 0.5;
+  const double halfHeight = RINK_HEIGHT * 0.5;
+
+  FOR_ENTITY(COMPONENT_POSITION | COMPONENT_VELOCITY | COMPONENT_COLLIDER)
+  {
+    Position & pos = g_world.position[i];
+    Velocity & vel = g_world.velocity[i];
+    Collider & col = g_world.collider[i];
+
+    // Check against the walls
+    if ((pos.pos.x + col.radius) > halfWidth || (pos.pos.x - col.radius) < -halfWidth)
+    {
+      vel.vel.x *= -col.bounce;
+    }
+    else if ((pos.pos.y + col.radius) > halfHeight || (pos.pos.y - col.radius) < -halfHeight)
+    {
+      vel.vel.y *= -col.bounce;
+    }
   }
 }
 
@@ -199,7 +235,7 @@ int createRink()
   int rink = createEntity(g_world, COMPONENT_POSITION | COMPONENT_SPRITE);
 
   g_world.position[rink].pos = vmake(0, 0);
-  g_world.sprite[rink].size = vmake(61.0, 30.5);
+  g_world.sprite[rink].size = vmake(RINK_WIDTH, RINK_HEIGHT);
   g_world.sprite[rink].color = COLOR_WHITE;
 
   return rink;
@@ -244,7 +280,7 @@ void processInput()
   input1.input = 0;
   input2.input = 0;
 
-  for (int i = 0; i < 4; ++i)
+  for (int i = 0; i < SIZE_ARRAY(INPUT_MAPPINGS[0]); ++i)
   {
     input1.input |= SYS_KeyPressed(INPUT_MAPPINGS[0][i].key) ? INPUT_MAPPINGS[0][i].bit : 0;
     input1.input |= SYS_KeyPressed(INPUT_MAPPINGS[1][i].key) ? INPUT_MAPPINGS[1][i].bit : 0;
@@ -255,7 +291,8 @@ void runGame()
 {
   const double dt = 1.0 / 60.0;
 
-  applyPosition(dt);
+  moveObjects(dt);
+  checkCollisions();
 }
 
 int start()
