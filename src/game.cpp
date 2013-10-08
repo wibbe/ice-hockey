@@ -271,7 +271,6 @@ void render()
     Position & pos = g_world.position[i];
     Sprite & sprite = g_world.sprite[i];
 
-    printf("Render sprite %d\n", sprite.tex);
     CORE_RenderCenteredSprite(pos.pos, sprite.size, sprite.tex, sprite.color);
   }
 }
