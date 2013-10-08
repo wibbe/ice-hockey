@@ -10,9 +10,8 @@
 #define SYS_HEIGHT 768
 #define SYS_FULLSCREEN 0
 
-// Main game coordinate system: width is 1000, height is 1500. Origin bottom left
-#define G_WIDTH  1333
-#define G_HEIGHT 1000
+// Main game coordinate system: width is 1000, height is 1500. Origin center of screen
+#define G_HEIGHT 80.0
 
 //========================================================================================
 // Platform layer

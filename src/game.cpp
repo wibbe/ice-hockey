@@ -13,7 +13,7 @@ double g_time;
 
 enum TexID
 {
-  TEX_RINK = 0
+  TEXTURE_RINK = 0
 };
 
 struct Texture
@@ -36,7 +36,7 @@ void unloadTextures()
     CORE_UnloadBmp(TEXTURES[i].tex);
 }
 
-int texID(int id)
+int texId(int id)
 {
   assert(id < SIZE_ARRAY(TEXTURES));
   return TEXTURES[id].tex;
@@ -194,13 +194,13 @@ void checkCollisions()
   const double halfWidth = RINK_WIDTH * 0.5;
   const double halfHeight = RINK_HEIGHT * 0.5;
 
+  // Check against the walls
   FOR_ENTITY(COMPONENT_POSITION | COMPONENT_VELOCITY | COMPONENT_COLLIDER)
   {
     Position & pos = g_world.position[i];
     Velocity & vel = g_world.velocity[i];
     Collider & col = g_world.collider[i];
 
-    // Check against the walls
     if ((pos.pos.x + col.radius) > halfWidth || (pos.pos.x - col.radius) < -halfWidth)
     {
       vel.vel.x *= -col.bounce;
@@ -237,6 +237,7 @@ int createRink()
   g_world.position[rink].pos = vmake(0, 0);
   g_world.sprite[rink].size = vmake(RINK_WIDTH, RINK_HEIGHT);
   g_world.sprite[rink].color = COLOR_WHITE;
+  g_world.sprite[rink].tex = texId(TEXTURE_RINK);
 
   return rink;
 }
@@ -249,6 +250,8 @@ void startGame()
 
   g_team1 = createTeam();
   g_team2 = createTeam();
+
+  createRink();
 
   g_time = 0.0;
 }
@@ -268,6 +271,7 @@ void render()
     Position & pos = g_world.position[i];
     Sprite & sprite = g_world.sprite[i];
 
+    printf("Render sprite %d\n", sprite.tex);
     CORE_RenderCenteredSprite(pos.pos, sprite.size, sprite.tex, sprite.color);
   }
 }
@@ -303,7 +307,11 @@ int start()
   glClearColor(0.0f, 0.1f, 0.3f, 0.0f);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(0.0, G_WIDTH, 0.0, G_HEIGHT, 0.0, 1.0);
+  glOrtho(0.0, (SYS_WIDTH / SYS_HEIGHT) * G_HEIGHT, 0.0, G_HEIGHT, 0.0, 1.0);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  glTranslatef((SYS_WIDTH / SYS_HEIGHT) * G_HEIGHT * 0.5, G_HEIGHT * 0.5, 0.0);
+
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -316,7 +324,7 @@ int start()
     runGame();
     SYS_Pump();
     SYS_Sleep(16);
-    g_time += 1.f/60.f;
+    g_time += 1.0 / 60.0;
   }
 
   endGame();
