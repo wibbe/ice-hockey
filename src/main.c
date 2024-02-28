@@ -241,7 +241,9 @@ static void update_entity(entity_t* ent) {
         ent->vel = vzero();
     }
 
-    collide_entity(ent, &rink_collider);
+    if (collide_entity(ent, &rink_collider)) {
+        tone(340, 5, 10, TONE_TRIANGLE);
+    }
 }
 
 static void update_game(void) {
@@ -276,6 +278,7 @@ static void draw_puck(void) {
 static void draw(void) {
     *DRAW_COLORS = 0x4321;
     blit(rink, -game.camera, 0, rinkWidth, rinkHeight, rinkFlags);
+    blit(rink, -game.camera + SCREEN_SIZE, 0, rinkWidth, rinkHeight, rinkFlags|BLIT_FLIP_X);
 
 
     draw_puck();
@@ -296,6 +299,14 @@ static void new_game(void) {
 }
 
 void start(void) {
+    // Setup palette
+    PALETTE[0] = 0xe9f4e1;
+    PALETTE[1] = 0xd70f0f;
+    PALETTE[2] = 0x0b3bf2;
+    PALETTE[3] = 0x071821;
+
+
+
     new_game();
 }
 
