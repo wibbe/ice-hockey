@@ -31,6 +31,15 @@ const uint8_t smiley[] = {
     0b11000011,
 };
 
+enum {
+    PLAYER_GOLIE = 0,
+    PLAYER_DEFENDER1,
+    PLAYER_DEFENDER2,
+    PLAYER_ATTACKER1,
+    PLAYER_ATTACKER2,
+    PLAYER_COUNT
+};
+
 
 
 typedef struct player_t {
@@ -43,7 +52,7 @@ typedef struct puck_t {
 
 typedef struct team_t {
     int score;
-    player_t players[5];
+    player_t players[PLAYER_COUNT];
 } team_t;
 
 typedef struct game_t {
@@ -94,6 +103,14 @@ static static_collider_t rink_collider = {
     .lines_count = sizeof(rink_collider_lines) / sizeof(line_t),
 };
 
+static vec2_t player_lineup[] = {
+    (vec2_t) {34, 86},
+    (vec2_t) {110, 63},
+    (vec2_t) {100, 112},
+    (vec2_t) {154, 87},
+    (vec2_t) {142, 108},
+};
+
 
 
 static game_t game = {0};
@@ -116,8 +133,6 @@ static void update_entity(entity_t *ent) {
 
 static void update_game(void) {
     update_entity(&game.puck.ent);
-    update_entity(&game.puck2.ent);
-
     dynamic_collide_entity(&game.puck.ent, &game.puck2.ent);
 }
 
@@ -144,9 +159,11 @@ static void update_camera(void) {
 static void draw_puck(void) {
     *DRAW_COLORS = 2;
     blit(smiley, screen(game.puck.ent.pos.x) - 4 - game.camera, screen(game.puck.ent.pos.y) - 4, 8, 8, BLIT_1BPP);
+}
 
-    *DRAW_COLORS = 3;
-    blit(smiley, screen(game.puck2.ent.pos.x) - 4 - game.camera, screen(game.puck2.ent.pos.y) - 4, 8, 8, BLIT_1BPP);
+static void draw_player(player_t *player, int team) {
+    *DRAW_COLORS = 0x40 | (team == 0 ? 0x02 : 0x03);
+    oval(screen(player->ent.pos.x) - 4 - game.camera, screen(player->ent.pos.y) - 4, 8, 8);
 }
 
 static void draw(void) {
@@ -154,6 +171,10 @@ static void draw(void) {
     blit(rink, -game.camera, 0, rinkWidth, rinkHeight, rinkFlags);
     blit(rink, -game.camera + SCREEN_SIZE, 0, rinkWidth, rinkHeight, rinkFlags|BLIT_FLIP_X);
 
+
+    for (int i = 0; i < PLAYER_COUNT; ++i) {
+        draw_player(&game.teams[0].players[i], 0);
+    }
 
     draw_puck();
 }
@@ -166,15 +187,14 @@ static void new_game(void) {
 
     // Puck
     game.puck.ent.pos = vec(140, 87);
-    game.puck2.ent.pos = vec(180, 89);
 
     game.puck.ent.vel.x = 1.5f;
     game.puck.ent.vel.y = 0.0f;
     game.puck.ent.size = 4.0f;
 
-    game.puck2.ent.vel.x = -1.5f;
-    game.puck2.ent.vel.y = 0.0f;
-    game.puck2.ent.size = 4.0f;    
+    for (int i = 0; i < PLAYER_COUNT; ++i) {
+        game.teams[0].players[i].ent.pos = player_lineup[i];
+    }
 }
 
 void start(void) {
