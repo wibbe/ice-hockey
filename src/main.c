@@ -40,6 +40,11 @@ enum {
     PLAYER_COUNT
 };
 
+enum {
+    TEAM_RED = 0,
+    TEAM_BLUE,
+};
+
 
 
 typedef struct player_t {
@@ -155,6 +160,7 @@ static void update_team(team_t *team, uint8_t input) {
     bool up = input & BUTTON_UP;    
     bool down = input & BUTTON_DOWN;
     bool shoot = input & BUTTON_1;
+    bool pass = input & BUTTON_2;
 
     if (left || right || up || down) {
         vec2_t vel = vzero();
@@ -180,15 +186,43 @@ static void update_team(team_t *team, uint8_t input) {
         player_t *player = &team->players[i];
 
         if (i != team->active_player) {
-            player->ent.vel = vscale(player->ent.vel, 0.9f);    
+            player->ent.vel = vscale(player->ent.vel, 0.9f);
         }
 
         update_entity(&player->ent);
 
         if (game.puck.owner == player) {
             if (shoot) {
-                game.puck.ent.vel = vscale(player->dir, 3.0f);
+                game.puck.ent.vel = vscale(player->dir, 3.5f);
                 game.puck.owner = NULL;
+            } else if (pass) {
+                player_t *target_player = NULL;
+                float target_angle = 0.0f;
+                vec2_t target_dir;
+
+                for (int j = 0; j < PLAYER_COUNT; ++j) {
+                    if (i == j) {
+                        continue;
+                    }
+
+                    player_t *other = &team->players[j];
+                    vec2_t to_other = vnormalized(vsub(other->ent.pos, player->ent.pos));
+                    float angle = vdot(player->dir, to_other);
+
+                    if (angle > target_angle) {
+                        target_player = other;
+                        target_angle = angle;
+                        target_dir = to_other;
+                    }
+                }
+
+                if (target_player != NULL) {
+                    game.puck.ent.vel = vscale(target_dir, 2.0f);
+                    game.puck.owner = NULL;
+                } else {
+                    game.puck.ent.vel = vscale(player->dir, 2.0f);
+                    game.puck.owner = NULL;
+                }
             }
         }
     }    
