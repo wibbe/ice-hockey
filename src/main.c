@@ -44,21 +44,23 @@ enum {
 
 typedef struct player_t {
     entity_t ent;
+    vec2_t dir;
 } player_t;
 
 typedef struct puck_t {
     entity_t ent;
+    player_t *owner;
 } puck_t;
 
 typedef struct team_t {
     int score;
     player_t players[PLAYER_COUNT];
+    int active_player;
 } team_t;
 
 typedef struct game_t {
     team_t teams[2];
     puck_t puck;
-    puck_t puck2;
     int camera;
 } game_t;
 
@@ -130,15 +132,79 @@ static void update_entity(entity_t *ent) {
     }
 }
 
+static void update_puck(void) {
+    if (game.puck.owner == NULL) {
+        update_entity(&game.puck.ent);
+
+        // Check distance to all players, to see if they can take possession of the puck
+        for (int i = 0; i < PLAYER_COUNT; ++i) {
+            player_t *player = &game.teams[0].players[i];
+            if (vlength(vsub(player->ent.pos, game.puck.ent.pos)) < 6.0f) {
+                game.puck.owner = player;
+                game.teams[0].active_player = i;
+            }
+        }
+    } else {
+        game.puck.ent.pos = vadd(game.puck.owner->ent.pos, vscale(game.puck.owner->dir, 8.0f));
+    }
+}
+
+static void update_team(team_t *team, uint8_t input) {
+    bool left = input & BUTTON_LEFT;    
+    bool right = input & BUTTON_RIGHT;    
+    bool up = input & BUTTON_UP;    
+    bool down = input & BUTTON_DOWN;
+    bool shoot = input & BUTTON_1;
+
+    if (left || right || up || down) {
+        vec2_t vel = vzero();
+        if (left)
+            vel.x -= 1;
+        if (right)
+            vel.x = 1;
+        if (up)
+            vel.y = -1;
+        if (down)
+            vel.y = 1;
+
+        vel = vnormalized(vel);
+        team->players[team->active_player].dir = vel;
+        team->players[team->active_player].ent.vel = vel;
+
+    } else {
+        vec2_t vel = team->players[team->active_player].ent.vel;
+        team->players[team->active_player].ent.vel = vscale(vel, 0.9f);
+    }
+
+    for (int i = 0; i < PLAYER_COUNT; ++i) {
+        player_t *player = &team->players[i];
+
+        if (i != team->active_player) {
+            player->ent.vel = vscale(player->ent.vel, 0.9f);    
+        }
+
+        update_entity(&player->ent);
+
+        if (game.puck.owner == player) {
+            if (shoot) {
+                game.puck.ent.vel = vscale(player->dir, 3.0f);
+                game.puck.owner = NULL;
+            }
+        }
+    }    
+}
 
 static void update_game(void) {
-    update_entity(&game.puck.ent);
-    dynamic_collide_entity(&game.puck.ent, &game.puck2.ent);
+    update_puck();
+    update_team(&game.teams[0], *GAMEPAD1);
 }
 
 
 static void update_camera(void) {
-    int camera_diff = screen(game.puck.ent.pos.x) - game.camera;
+    int x = screen(game.teams[0].players[game.teams[0].active_player].ent.pos.x);
+
+
+    int camera_diff = x - game.camera;
     if (camera_diff > 110) {
         game.camera += camera_diff - 110;
     }
@@ -188,12 +254,15 @@ static void new_game(void) {
     // Puck
     game.puck.ent.pos = vec(140, 87);
 
-    game.puck.ent.vel.x = 1.5f;
-    game.puck.ent.vel.y = 0.0f;
+    game.puck.ent.vel.x = 1.0f;
+    game.puck.ent.vel.y = 1.0f;
     game.puck.ent.size = 4.0f;
+
+    game.teams[0].active_player = PLAYER_ATTACKER1;
 
     for (int i = 0; i < PLAYER_COUNT; ++i) {
         game.teams[0].players[i].ent.pos = player_lineup[i];
+        game.teams[0].players[i].ent.size = 4.0f;
     }
 }
 
